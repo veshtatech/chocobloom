@@ -23,10 +23,12 @@ import {
   Globe,
   ArrowLeft,
   KeyRound,
+  Users,
 } from 'lucide-react';
 import { Product, StoreSettings, OrderRecord, StockStatus, ProductCategory } from '../types';
 import { initialProducts, defaultStoreSettings } from '../data/initialProducts';
 import { saveProducts, saveSettings, updateOrderStatus } from '../utils/storage';
+import { CrmOrdersManager } from './CrmOrdersManager';
 
 interface AdminDashboardModalProps {
   isOpen: boolean;
@@ -60,8 +62,8 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
   const [lockoutUntil, setLockoutUntil] = useState<number | null>(null);
   const [cooldownSeconds, setCooldownSeconds] = useState(0);
 
-  // Active Tab
-  const [activeTab, setActiveTab] = useState<'inventory' | 'orders' | 'settings'>('inventory');
+  // Active Tab: inventory | crm | settings
+  const [activeTab, setActiveTab] = useState<'inventory' | 'crm' | 'settings'>('crm');
 
   // Inventory Filter
   const [inventoryStockFilter, setInventoryStockFilter] = useState<'all' | StockStatus>('all');
@@ -344,17 +346,22 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                 </button>
                 <button
                   onClick={() => {
-                    setActiveTab('orders');
+                    setActiveTab('crm');
                     setEditingProduct(null);
                   }}
                   className={`px-3.5 py-2 text-xs font-semibold rounded-lg transition flex items-center gap-2 ${
-                    activeTab === 'orders'
+                    activeTab === 'crm'
                       ? 'bg-white text-[#2C1810] shadow-xs'
                       : 'text-[#6D5144] hover:text-[#2C1810]'
                   }`}
                 >
-                  <ShoppingBag className="w-3.5 h-3.5" />
-                  <span>Orders Log ({orders.length})</span>
+                  <Users className="w-3.5 h-3.5 text-[#8C5E35]" />
+                  <span>CRM & Orders ({orders.length})</span>
+                  {orders.filter((o) => o.status === 'awaiting_payment').length > 0 && (
+                    <span className="px-1.5 py-0.2 bg-amber-500 text-white text-[10px] rounded-full font-bold">
+                      {orders.filter((o) => o.status === 'awaiting_payment').length}
+                    </span>
+                  )}
                 </button>
                 <button
                   onClick={() => {
@@ -717,93 +724,13 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
               </div>
             )}
 
-            {/* TAB 2: ORDERS & INQUIRIES LOG */}
-            {activeTab === 'orders' && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <h4 className="font-serif text-base font-bold text-[#2C1810]">
-                      Captured Order Inquiries
-                    </h4>
-                    <p className="text-xs text-[#7B6256]">
-                      Every order placed on the website is tracked here for your reference.
-                    </p>
-                  </div>
-                  <button
-                    onClick={handleExportOrders}
-                    className="px-3.5 py-2 bg-[#FAF0E4] hover:bg-[#F3E2CF] text-[#4A2E20] border border-[#E3CAAF] text-xs font-semibold rounded-xl flex items-center gap-1.5 transition"
-                  >
-                    <Download className="w-3.5 h-3.5 text-[#8C5E35]" />
-                    <span>Export to CSV</span>
-                  </button>
-                </div>
-
-                {orders.length === 0 ? (
-                  <div className="p-8 text-center bg-white rounded-2xl border border-[#EADBCC] text-[#8C766C] space-y-2">
-                    <ShoppingBag className="w-8 h-8 mx-auto stroke-1 text-[#C4ADA1]" />
-                    <p className="text-xs">No orders recorded yet. As customers check out, their details and cart breakdowns will appear here.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {orders.map((order) => (
-                      <div
-                        key={order.id}
-                        className="p-4 bg-white rounded-2xl border border-[#EADBCC] shadow-xs space-y-3"
-                      >
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[#F0E4D7]">
-                          <div className="flex items-center gap-2">
-                            <span className="font-mono text-xs font-bold text-[#2C1810]">
-                              #{order.orderNumber}
-                            </span>
-                            <span className="text-[11px] text-[#8C766C]">
-                              {new Date(order.createdAt).toLocaleString()}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-2">
-                            <span className="text-xs text-[#8C766C]">Status:</span>
-                            <select
-                              value={order.status}
-                              onChange={(e) => handleOrderStatusChange(order.id, e.target.value as OrderRecord['status'])}
-                              className="text-xs font-medium px-2 py-1 bg-[#FAF5EF] border border-[#DAC9B7] rounded-lg"
-                            >
-                              <option value="awaiting_payment">Awaiting Payment</option>
-                              <option value="paid_confirmed">Paid & Confirmed</option>
-                              <option value="dispatched">Dispatched</option>
-                              <option value="completed">Completed</option>
-                            </select>
-                          </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs text-[#5C4337]">
-                          <div>
-                            <strong className="text-[#2C1810] block">Customer:</strong>
-                            <p>{order.customer.name} ({order.customer.phone})</p>
-                            <p className="text-[#7B6256]">{order.customer.address}, {order.customer.cityPincode}</p>
-                            {order.customer.giftNote && (
-                              <p className="text-[#A66228] italic mt-0.5">Card Note: "{order.customer.giftNote}"</p>
-                            )}
-                          </div>
-
-                          <div>
-                            <strong className="text-[#2C1810] block">Ordered Items:</strong>
-                            <ul className="list-disc pl-4 space-y-0.5">
-                              {order.items.map((i, idx) => (
-                                <li key={idx}>
-                                  {i.name} ({i.code}) — {i.quantity} pcs (₹{i.subtotal.toLocaleString('en-IN')})
-                                </li>
-                              ))}
-                            </ul>
-                            <p className="font-serif font-bold text-[#2C1810] mt-1">
-                              Grand Total: ₹{order.totalAmount.toLocaleString('en-IN')}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
+            {/* TAB 2: CRM & ORDER TRACKING / ZERO-COST UPI RECONCILIATION */}
+            {activeTab === 'crm' && (
+              <CrmOrdersManager
+                orders={orders}
+                onUpdateOrders={onUpdateOrders}
+                settings={settings}
+              />
             )}
 
             {/* TAB 3: STORE & UPI SETTINGS */}

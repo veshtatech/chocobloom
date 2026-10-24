@@ -437,6 +437,7 @@ export default function App() {
         orders={orders}
         settings={settings}
         initialOrderId={trackingOrderId}
+        onUpdateOrders={setOrders}
       />
     </div>
   );

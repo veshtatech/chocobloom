@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { OrderRecord, StoreSettings } from '../types';
 import { createWhatsAppUrl } from '../utils/whatsapp';
+import { updateOrderRecord } from '../utils/storage';
 import { UpiPaymentCard } from './UpiPaymentCard';
 
 interface OrderTrackingModalProps {
@@ -28,6 +29,7 @@ interface OrderTrackingModalProps {
   orders: OrderRecord[];
   settings: StoreSettings;
   initialOrderId?: string;
+  onUpdateOrders?: (orders: OrderRecord[]) => void;
 }
 
 export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
@@ -36,12 +38,28 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
   orders,
   settings,
   initialOrderId = '',
+  onUpdateOrders,
 }) => {
   const [searchInput, setSearchInput] = useState(initialOrderId);
   const [searchedId, setSearchedId] = useState(initialOrderId);
   const [hasSearched, setHasSearched] = useState(false);
   const [copiedId, setCopiedId] = useState(false);
   const [showUpiCard, setShowUpiCard] = useState(false);
+  const [utrSubmission, setUtrSubmission] = useState('');
+  const [utrSavedMessage, setUtrSavedMessage] = useState(false);
+
+  const handleSubmitCustomerUtr = (orderId: string) => {
+    if (!utrSubmission.trim()) return;
+    const updated = updateOrderRecord(orderId, {
+      upiReference: utrSubmission.trim(),
+    });
+    if (onUpdateOrders) {
+      onUpdateOrders(updated);
+    }
+    setUtrSavedMessage(true);
+    setUtrSubmission('');
+    setTimeout(() => setUtrSavedMessage(false), 4000);
+  };
 
   // Sync initial order ID when opened
   useEffect(() => {
@@ -456,9 +474,63 @@ export const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
                 </div>
               </div>
 
-              {/* Special UPI Card toggle if awaiting payment */}
+              {/* Special UPI Card toggle & UTR submission if awaiting payment */}
               {matchedOrder.status === 'awaiting_payment' && (
                 <div className="space-y-3">
+                  {/* Zero-Hassle Automated Notice & Optional UTR Card */}
+                  <div className="p-4 bg-emerald-50/90 border border-emerald-200 rounded-2xl space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-emerald-700 shrink-0" />
+                      <span className="text-xs font-bold text-emerald-950">
+                        Zero-Hassle Automatic Verification
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-emerald-800 leading-relaxed">
+                      Once you transfer ₹{matchedOrder.totalAmount.toLocaleString('en-IN')} via UPI, our store automatically matches the bank SMS credit. <strong>You don't need to copy or paste any transaction IDs!</strong>
+                    </p>
+
+                    {matchedOrder.upiReference ? (
+                      <div className="text-xs text-emerald-900 bg-white p-2.5 rounded-xl border border-emerald-200 space-y-0.5 mt-1">
+                        <span className="text-[10px] text-emerald-700 font-semibold uppercase tracking-wider block">Recorded UTR:</span>
+                        <p className="font-mono font-bold text-sm text-emerald-950">{matchedOrder.upiReference}</p>
+                      </div>
+                    ) : (
+                      <details className="pt-1 text-[11px] text-[#7B6256] group">
+                        <summary className="cursor-pointer text-[#8C5E35] font-semibold hover:underline flex items-center gap-1">
+                          <span>Have a 12-digit UTR and want to enter it manually? (Optional)</span>
+                        </summary>
+                        <div className="mt-2.5 p-3 bg-white rounded-xl border border-[#DAC9B7] space-y-2">
+                          <p className="text-[11px] text-[#6D5144]">
+                            Enter 12-digit UTR from your payment app (optional):
+                          </p>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              maxLength={16}
+                              value={utrSubmission}
+                              onChange={(e) => setUtrSubmission(e.target.value)}
+                              placeholder="12-digit UTR (Optional)"
+                              className="flex-1 text-xs font-mono p-2 bg-[#FAF7F2] border border-[#DAC9B7] rounded-xl text-[#2C1810]"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => handleSubmitCustomerUtr(matchedOrder.id)}
+                              disabled={!utrSubmission.trim()}
+                              className="px-3.5 py-2 bg-[#2C1810] hover:bg-[#43261A] text-white text-xs font-semibold rounded-xl disabled:opacity-50 transition shrink-0"
+                            >
+                              Save UTR
+                            </button>
+                          </div>
+                          {utrSavedMessage && (
+                            <p className="text-[11px] text-emerald-700 font-semibold flex items-center gap-1">
+                              <Check className="w-3.5 h-3.5" /> UTR saved!
+                            </p>
+                          )}
+                        </div>
+                      </details>
+                    )}
+                  </div>
+
                   {!showUpiCard ? (
                     <button
                       type="button"

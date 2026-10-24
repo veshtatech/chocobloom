@@ -80,16 +80,28 @@ export function saveOrder(order: OrderRecord): void {
   }
 }
 
-export function updateOrderStatus(orderId: string, status: OrderRecord['status']): OrderRecord[] {
+export function saveOrdersList(orders: OrderRecord[]): void {
+  try {
+    localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(orders));
+  } catch (err) {
+    console.error('Error saving orders list:', err);
+  }
+}
+
+export function updateOrderRecord(orderId: string, partial: Partial<OrderRecord>): OrderRecord[] {
   try {
     const existing = getStoredOrders();
-    const updated = existing.map((o) => (o.id === orderId ? { ...o, status } : o));
+    const updated = existing.map((o) => (o.id === orderId ? { ...o, ...partial } : o));
     localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(updated));
     return updated;
   } catch (err) {
-    console.error('Error updating order:', err);
+    console.error('Error updating order record:', err);
     return [];
   }
+}
+
+export function updateOrderStatus(orderId: string, status: OrderRecord['status']): OrderRecord[] {
+  return updateOrderRecord(orderId, { status });
 }
 
 export function generateOrderNumber(): string {

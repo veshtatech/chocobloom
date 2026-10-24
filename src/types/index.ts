@@ -63,7 +63,13 @@ export interface OrderRecord {
   }[];
   totalAmount: number;
   status: 'new_inquiry' | 'awaiting_payment' | 'paid_confirmed' | 'dispatched' | 'completed';
-  upiReference?: string;
+  upiReference?: string; // 12-digit UTR or Transaction ID
+  paymentVerifiedAt?: string;
+  paymentVerifiedBy?: string;
+  courierName?: string;
+  trackingNumber?: string;
+  adminNotes?: string;
+  customerTag?: 'New' | 'Repeat' | 'VIP' | 'Corporate';
 }
 
 export interface StoreSettings {
