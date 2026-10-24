@@ -1,0 +1,8 @@
+{
+  "name": "Remix ChocoBloom Luxury Homemade Chocolates \u0026 Gifting",
+  "description": "Artisanal homemade chocolates, festive cracker collections, and luxury hampers. Order directly on WhatsApp with seamless UPI payments.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
